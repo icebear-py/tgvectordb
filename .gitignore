@@ -1,0 +1,36 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# local data (sessions, indexes)
+.tgvectordb/
+
+# telethon sessions
+*.session
+*.session-journal
+
+# env stuff
+.env
+.venv/
+venv/
+env/
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+
+# testing
+.pytest_cache/
+.coverage
+htmlcov/
