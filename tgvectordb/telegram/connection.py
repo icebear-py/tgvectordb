@@ -41,19 +41,16 @@ class TelegramConnection:
         self.data_dir = (data_dir or DEFAULT_DATA_DIR) / db_name
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.session_path = self.data_dir / "session"
-        self.client = None
+        session_path = self.data_dir / "session"
+        self.client = TelegramClient(
+            str(session_path), self.api_id, self.api_hash
+        )
         self._connected = False
 
     async def connect(self):
         """connect and authenticate if needed."""
         if self._connected:
             return
-
-        if self.client is None:
-            self.client = TelegramClient(
-                str(self.session_path), self.api_id, self.api_hash
-            )
 
         await self.client.connect()
 

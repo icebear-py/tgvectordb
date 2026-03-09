@@ -100,23 +100,41 @@ def answer(question):
 ## commands
 
 ```python
-db.add("text")                          # add single text
-db.add_batch(texts, metadatas)          # add multiple texts
-db.add_source("file.pdf")              # add a pdf
-db.add_source("notes.docx")            # add a word doc
-db.add_source("data.csv")              # add a csv (auto-converts to readable text)
-db.add_source("code.py")               # add a code file
-db.add_directory("./my_docs/")         # add all files from a folder
-db.add_directory("./docs", extensions=[".pdf", ".docx"])  # only specific types
+# --- Adding Data ---
+db.add("text")                          
+# Adds a single string of text to the database.
 
-db.search("query", top_k=5)            # semantic search
-db.search("query", filter={"src": "x"}) # search with filter
+db.add_batch(texts, metadatas)          
+# Adds multiple texts at once with optional metadata. Much faster than calling add() in a loop since it batches the embeddings and Telegram messages.
 
-db.reindex()                           # force re-clustering
-db.backup()                            # save index to telegram
-db.restore()                           # load index from telegram
-db.stats()                             # database info
-db.delete(filter={"src": "old.pdf"})   # remove vectors
+db.add_source("file.pdf")              
+# Automatically parses, chunks, and adds a supported file format (.pdf, .docx, .txt, .md, .html, .csv, .json, .py, etc).
+
+db.add_directory("./my_docs/", extensions=[".pdf", ".docx"])  
+# Ingests all supported files within a directory concurrently.
+
+# --- Search & Retrieval ---
+db.search("query", top_k=5)            
+# Performs a semantic similarity search against the stored vectors and returns the top_k most relevant chunks.
+
+db.search("query", filter={"src": "document.pdf"}) 
+# Filters the semantic search to ONLY check against vectors matching that exact metadata tag.
+
+# --- Database Management ---
+db.reindex()                           
+# Forces a full re-clustering of your entire vector database. Normally this is handled automatically as your dataset grows.
+
+db.backup()                            
+# Zips up the small local SQLite index map and uploads it to a private Telegram channel for disaster recovery.
+
+db.restore()                           
+# Downloads the latest index backup from Telegram, allowing you to instantly restore your database on any machine.
+
+db.stats()                             
+# Returns a dictionary of database statistics, including vector counts, cache hit rates, and clustering metrics.
+
+db.delete(filter={"src": "old.pdf"})   
+# Permanently removes all vectors and metadata matching a specific filter from both Telegram and the local index.
 ```
 
 ## supported file formats

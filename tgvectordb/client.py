@@ -54,25 +54,23 @@ from tgvectordb.utils.serialization import pack_vector_message
 
 import threading
 
-_worker_loop = None
-_worker_thread = None
+_bg_loop = None
+_bg_thread = None
 
-def _start_worker():
-    global _worker_loop
-    _worker_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(_worker_loop)
-    _worker_loop.run_forever()
+def _start_bg_loop():
+    global _bg_loop, _bg_thread
+    if _bg_loop is None:
+        _bg_loop = asyncio.new_event_loop()
+        def run_loop():
+            asyncio.set_event_loop(_bg_loop)
+            _bg_loop.run_forever()
+        _bg_thread = threading.Thread(target=run_loop, daemon=True)
+        _bg_thread.start()
 
 def _run(coro):
-    """helper to run async code from sync context using a persistent background loop. handles event loop messiness for telethon."""
-    global _worker_loop, _worker_thread
-    if _worker_thread is None:
-        _worker_thread = threading.Thread(target=_start_worker, daemon=True)
-        _worker_thread.start()
-        while _worker_loop is None or not _worker_loop.is_running():
-            time.sleep(0.01)
-
-    future = asyncio.run_coroutine_threadsafe(coro, _worker_loop)
+    """helper to run async code from sync context. uses a persistent background loop."""
+    _start_bg_loop()
+    future = asyncio.run_coroutine_threadsafe(coro, _bg_loop)
     return future.result()
 
 
@@ -468,14 +466,25 @@ class TgVectorDB:
         total = self._index.get_total_vectors()
         n_clusters = self._index.get_num_clusters()
         cache_stats = self._cache.stats()
+        last_backup = self._index.get_config("last_backup_count", 0)
+        last_reindex = self._index.get_config("last_reindex_count", 0)
+
+        if total < CLUSTERING_THRESHOLD:
+            search_mode = f"flat (brute-force all {total} vectors, clustering kicks in at {CLUSTERING_THRESHOLD})"
+        else:
+            search_mode = f"IVF clustered ({n_clusters} clusters, probing top {self.nprobe})"
 
         return {
             "total_vectors": total,
+            "search_mode": search_mode,
             "num_clusters": n_clusters,
             "model": self._model.model_name,
             "dimensions": self._quantizer.dims,
             "db_name": self.db_name,
             "index_path": str(self._index.get_db_path()),
+            "last_reindex_at": last_reindex,
+            "last_backup_at": last_backup,
+            "vectors_since_backup": total - last_backup,
             "cache": cache_stats,
         }
 
@@ -557,9 +566,18 @@ class TgVectorDB:
         """check if we should trigger a reindex based on growth."""
         total = self._index.get_total_vectors()
         last_reindex = self._index.get_config("last_reindex_count", 0)
+        last_backup = self._index.get_config("last_backup_count", 0)
+
+        # always do a backup if enough new vectors were added
+        # even without clustering, the index (message id mappings) matters
+        vectors_since_backup = total - last_backup
+        should_backup = vectors_since_backup >= 10 or (last_backup == 0 and total > 0)
 
         if total < CLUSTERING_THRESHOLD:
-            return  # too small for clustering
+            # too small for clustering but still backup the index
+            if should_backup:
+                self._do_backup()
+            return
 
         if last_reindex == 0:
             # never been indexed and we have enough data now
@@ -569,6 +587,15 @@ class TgVectorDB:
         growth = (total - last_reindex) / max(last_reindex, 1)
         if growth >= REINDEX_GROWTH_TRIGGER:
             self._do_reindex()
+        elif should_backup:
+            # not enough growth for reindex but enough for a backup
+            self._do_backup()
+
+    def _do_backup(self):
+        """backup the local index to telegram. happens even without clustering."""
+        total = self._index.get_total_vectors()
+        self.backup()
+        self._index.set_config("last_backup_count", total)
 
     def _do_reindex(self):
         """the actual reindex operation. fetches all vectors, re-clusters, rebuilds index."""
@@ -635,6 +662,7 @@ class TgVectorDB:
 
         self._index.add_to_cluster_batch(entries)
         self._index.set_config("last_reindex_count", len(msg_ids_ordered))
+        self._index.set_config("last_backup_count", len(msg_ids_ordered))
 
         elapsed = time.time() - start
         print(f"reindex complete: {len(msg_ids_ordered)} vectors → {n_clusters} clusters ({elapsed:.1f}s)")
