@@ -38,6 +38,8 @@ pip install tgvectordb
 
 ### 2. Quick Start
 
+Download quickstart.py in examples folder and update your credentials or write on your own using: 
+
 ```python
 from tgvectordb import TgVectorDB
 
@@ -67,6 +69,8 @@ print(db.stats())
 ## Building a RAG Chatbot (The Real Reason You Are Here to Automate Homework)
 
 Building Retrieval-Augmented Generation (RAG) is entirely free here. Perfect for hobbyists, tinkerers, and broke students trying to build a personal AI tutor at 3 AM the night before an assignment is due.
+
+or Just download chatbot.py from examples folder and add your creds to directly use it as chatbot or create it on your own using : 
 
 ```python
 from tgvectordb import TgVectorDB
