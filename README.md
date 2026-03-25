@@ -141,8 +141,6 @@ All these formats are seamlessly extracted with a basic `pip install tgvectordb`
 
 ## Disclaimer
 
-## Disclaimer
-
 This library is a **hobbyist experimental project** designed for side-projects, panic-built student chatbots, and folks who don't want to pay Qdrant or any other cloud vectordb provider when their bank account has $4 in it. It is practically a satire of modern VC-backed enterprise vector databases. It works genuinely well, but please do not run your mission-critical, HIPAA-compliant enterprise SaaS on top of my Telegram hack. Because if it breaks, the only customer support you're getting is me reading your GitHub issue and closing it.
 
 **Note:** This project ingeniously (or stupidly) leverages Telegram's cloud infrastructure as a backend storage. While projects like *Pentaract* have achieved this since 2023 with excellent success, this is not an officially promoted enterprise use-case by Telegram. Please use a secondary account and respectfully avoid abusing rate limits so we don't ruin this for all the other broke students.
