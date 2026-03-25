@@ -1,37 +1,42 @@
 # TgVectorDB
 
-**Free, unlimited vector database backed by Telegram.**
+**The free, unlimited cloud vector database backed by... Telegram.**
 
-Store embeddings as Telegram messages. Search them semantically. No API keys. No servers. No monthly bills. Just your Telegram account.
+Store embeddings directly as Telegram messages. Search them semantically. No API keys. No Docker. No vector index scaling limits. No monthly VC-subsidized cloud bills. Just your Telegram account.
 
-> *Turbopuffer for broke developers.*
+> *Turbopuffer for broke CS students surviving on instant ramen.*
 
 ## How it works
 
-Your vectors are stored as messages in a private Telegram channel you own. A tiny local index (~1MB) routes queries to the right cluster. Search fetches only the relevant messages — not the whole database.
+Your vectors are stored as messages in a private Telegram channel you own. A tiny local index (~1MB) routes queries to the correct cluster locally, and then we fetch only the strictly relevant messages via MTProto. We don't download the whole database.
 
-```
-cold query:  ~0.5-2 seconds  (fetching from telegram)
-warm query:  <5 milliseconds   (from local cache)
-cost:        $0/month forever
+Why? Because I am building a personal chatbot and refuse to pay $70/mo for a managed enterprise vector database to store my notes PDF collections that i wont even need in next semester.
+
+```yaml
+Cold Query:  ~0.5 - 2.0 seconds (asking Telegram for messages)
+Warm Query:  < 5 milliseconds (it's cached locally now)
+Cost:        $0/month forever (perfect for your non-existent startup budget)
+Scalability: Unlimited (or until Parel durov notices you are storing your entire university library)
 ```
 
-## Install
+## Installation
+
+TgVectorDB comes with built-in capabilities to ingest PDFs, DOCX, and text embeddings via Telegram directly. One command handles it all:
 
 ```bash
 pip install tgvectordb
 ```
 
-everything is included — pdf, docx, embeddings, telegram. one command, done.
+## Getting Started
 
-## Get telegram credentials
+### 1. Get Telegram Credentials
 
-1. go to https://my.telegram.org
-2. log in with your phone number
-3. click "API development tools"
-4. create an app, grab the `api_id` and `api_hash`
+1. Go to https://my.telegram.org
+2. Log in with your phone number.
+3. Click on "API development tools".
+4. Create an application and copy your `api_id` and `api_hash`.
 
-## Quick start
+### 2. Quick Start
 
 ```python
 from tgvectordb import TgVectorDB
@@ -43,92 +48,105 @@ db = TgVectorDB(
     db_name="my-notes",
 )
 
-# add some text
-db.add("photosynthesis converts sunlight into chemical energy in plants")
-db.add("neural networks learn patterns from training data")
-db.add("sourdough bread requires a long fermentation process")
+# Add single texts
+db.add("Photosynthesis converts sunlight into chemical energy in plants, which I need to know for tomorrow's exam.")
+db.add("Neural networks learn patterns from training data. I just copy code from stackoverflow.")
 
-# search
-results = db.search("how do plants make food?", top_k=3)
-for r in results:
-    print(f"[{r['score']:.2f}] {r['text'][:80]}...")
+# Search semantically
+results = db.search("How do I pass biology without studying?", top_k=3)
+for result in results:
+    print(f"[{result['score']:.2f}] {result['text'][:80]}...")
 
-# add a whole document
-db.add_source("research_paper.pdf")
+# Ingest an entire document
+db.add_source("CS101_final_cheatsheet_vFINAL_v2.pdf")
 
-# check stats
+# Print database stats
 print(db.stats())
 ```
 
-## How to use with a RAG chatbot
+## Building a RAG Chatbot (The Real Reason You Are Here to Automate Homework)
+
+Building Retrieval-Augmented Generation (RAG) is entirely free here. Perfect for hobbyists, tinkerers, and broke students trying to build a personal AI tutor at 3 AM the night before an assignment is due.
 
 ```python
 from tgvectordb import TgVectorDB
 
-db = TgVectorDB(api_id=..., api_hash=..., phone=..., db_name="rag-bot")
+db = TgVectorDB(
+    api_id=12345, 
+    api_hash="your_api_hash", 
+    phone="+91xxxxxxxxxx", 
+    db_name="last-minute-homework-bot"
+)
 
-# index your docs (one time)
-db.add_source("handbook.pdf")
-db.add_source("faq.md")
+# Toss your chaotic life knowledge and class slides into the void (One-time setup)
+db.add_source("professor_ramble_transcript.pdf")
+db.add_source("assignment_that_makes_no_sense.md")
 
-# on each question
-def answer(question):
+# Query context on the fly
+def answer(question: str):
     context = db.search(question, top_k=5)
     context_text = "\n".join([r["text"] for r in context])
-    # pass to your LLM of choice (ollama, llama.cpp, openai, whatever)
-    return ask_llm(f"Context:\n{context_text}\n\nQuestion: {question}")
+    
+    # Pass to your local LLM (Ollama, vLLM, etc.)
+    prompt = f"Context:\n{context_text}\n\nQuestion: {question}"
+    return ask_llm(prompt)
 ```
 
 ## Features
 
-- **free forever** — telegram provides unlimited cloud storage at no cost
-- **zero infrastructure** — no docker, no servers, no databases to manage
-- **durable** — your data lives on telegram's multi-datacenter infrastructure
-- **portable** — `db.backup()` on current machine and `db.restore()` on any new machine and you're back in business
-- **fast enough** — 0.5-1.5s cold queries, <5ms warm queries with caching
-- **private** — data stays in your own private telegram channel
+- **Free Forever:** Telegram provides unlimited cloud storage entirely at no cost. Thanks, Telegram.
+- **Zero Infrastructure:** No Docker containers, servers, or external databases to manage.
+- **Highly Durable:** Your data safely resides on Telegram's multi-datacenter infrastructure.
+- **Fully Portable:** Run `db.backup()` on one machine and `db.restore()` on another. You're fully back up and running.
+- **Fast Search:** 0.5-1.5s for cold queries, <5ms for warm queries with our extremely complex intelligent caching.
+- **Private & Secure:** Your data stays within your private Telegram channels.
 
-## Important stuff
+## Architecture & Details
 
-- uses `intfloat/e5-small-v2` for embeddings (384 dims, runs on CPU)
-- vectors are int8 quantized to fit in telegram's 4096 char message limit
-- uses Telethon (MTProto) for fast message fetching, not the bot API
-- recommended: use a secondary telegram account, not your main one
-- this is for personal projects and prototyping, not production SaaS
+- Uses `intfloat/e5-small-v2` for embeddings (384 dimensions, runs perfectly on CPU).
+- Vectors are `int8` quantized to fit strictly within Telegram's 4096-character message limits.
+- Powered by `Telethon` (MTProto) for high-speed message fetching directly from the network, bypassing normal Bot API restrictions.
+- **Strong Recommendation:** Use a secondary, dedicated Telegram account instead of your primary personal account. If you get rate limited, you don't want your main chats delayed.
 
-## Commands
+## API Reference
 
+### Database Operations
 ```python
-db.add("text")                          # add single text
-db.add_batch(texts, metadatas)          # add multiple texts
-db.add_source("file.pdf")              # add a pdf
-db.add_source("notes.docx")            # add a word doc
-db.add_source("data.csv")              # add a csv (auto-converts to readable text)
-db.add_source("code.py")               # add a code file
-db.add_directory("./my_docs/")         # add all files from a folder
-db.add_directory("./docs", extensions=[".pdf", ".docx"])  # only specific types
+db.add("text")                          # Add single text passage
+db.add_batch(texts, metadatas)          # Add multiple texts optimally
+db.add_source("file.pdf")               # Parse and add a PDF file
+db.add_source("notes.docx")             # Parse and add a Word document
+db.add_source("data.csv")               # Add a CSV (auto-converts to semantic text)
+db.add_source("code.py")                # Add a raw code file
+db.add_directory("./my_docs/")          # Recursively add all supported files from a folder
+db.add_directory("./docs", extensions=[".pdf", ".docx"])  # Filter directory ingestion
 
-db.search("query", top_k=5)            # semantic search
-db.search("query", filter={"src": "x"}) # search with filter
+# Search & Retrieval
+db.search("query", top_k=5)             # Perform semantic search
+db.search("query", filter={"src": "x"}) # Search combined with metadata filtering
 
-db.reindex()                           # force re-clustering
-db.backup()                            # save index to telegram
-db.restore()                           # load index from telegram
-db.stats()                             # database info
-db.delete(filter={"src": "old.pdf"})   # remove vectors
+# Maintenance
+db.reindex()                            # Force dataset re-clustering for IVF
+db.backup()                             # Push local index mapping over to Telegram
+db.restore()                            # Restore local index mapping from Telegram
+db.delete(filter={"src": "old.pdf"})    # Delete specific vectors matching a rule
+db.stats()                              # Display database telemetry
 ```
 
-## Supported file formats
+## Supported Formats
 
-all included with `pip install tgvectordb`, no extras needed:
+All these formats are seamlessly extracted with a basic `pip install tgvectordb`, requiring no messy external boilerplate!
 
-`.pdf`, `.docx`, `.txt`, `.md`, `.html`, `.csv`, `.tsv`, `.json`, `.jsonl`, `.xml`, `.yaml`, `.py`, `.js`, `.java`, `.go`, `.rs`, and most text-based files.
+`.pdf`, `.docx`, `.txt`, `.md`, `.html`, `.csv`, `.tsv`, `.json`, `.jsonl`, `.xml`, `.yaml`, `.py`, `.js`, `.java`, `.go`, `.rs`, and most text-based source code files.
+
+## Disclaimer
+
+## Disclaimer
+
+This library is a **hobbyist experimental project** designed for side-projects, panic-built student chatbots, and folks who don't want to pay Qdrant or any other cloud vectordb provider when their bank account has $4 in it. It is practically a satire of modern VC-backed enterprise vector databases. It works genuinely well, but please do not run your mission-critical, HIPAA-compliant enterprise SaaS on top of my Telegram hack. Because if it breaks, the only customer support you're getting is me reading your GitHub issue and closing it.
+
+**Note:** This project ingeniously (or stupidly) leverages Telegram's cloud infrastructure as a backend storage. While projects like *Pentaract* have achieved this since 2023 with excellent success, this is not an officially promoted enterprise use-case by Telegram. Please use a secondary account and respectfully avoid abusing rate limits so we don't ruin this for all the other broke students.
 
 ## License
 
-MIT — do whatever you want with it.
-
-## Disclaimer
-This project is a hobby project created as an experiment , its not adviced to expect scalability.
-Do use and tell me if any feature you me to add.
-This project uses telegram's cloud infrastructure as a storage backend. while projects like Pentaract have done this since 2023 without issues, its not officially sanctioned by telegram. use a secondary account and don't abuse rate limits. see the full disclaimer in the docs.
+**MIT License** — Do whatever you want with it!
